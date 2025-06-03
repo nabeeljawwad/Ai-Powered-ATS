@@ -4,6 +4,7 @@ import base64
 import streamlit as st
 import os
 import io
+import fitz
 from PIL import Image
 import pdf2image
 import google.generativeai as genai
@@ -47,16 +48,17 @@ def get_gemini_response(input_prompt, pdf_content, job_desc):
 # ✅ Convert PDF to image
 def input_pdf_setup(uploaded_file):
     if uploaded_file is not None:
-        images = pdf2image.convert_from_bytes(uploaded_file.read())
-        first_page = images[0]
-        img_byte_arr = io.BytesIO()
-        first_page.save(img_byte_arr, format='JPEG')
-        img_byte_arr = img_byte_arr.getvalue()
-
+        pdf_data = uploaded_file.read()
+        doc = fitz.open(stream=pdf_data, filetype="pdf")
+        page = doc.load_page(0)  # first page
+        pix = page.get_pixmap()
+        
+        img_byte_arr = io.BytesIO(pix.tobytes())
+        
         return [
             {
                 "mime_type": "image/jpeg",
-                "data": base64.b64encode(img_byte_arr).decode()
+                "data": base64.b64encode(img_byte_arr.getvalue()).decode()
             }
         ]
     else:
@@ -64,7 +66,7 @@ def input_pdf_setup(uploaded_file):
 
 # ✅ Streamlit App UI
 st.set_page_config(page_title="AI Powered ATS")
-st.header("📄 *AI Powered Application Tracking System*")
+st.header("📄 *AI Powered Application Tracking System by Nabeel*")
 
 input_text = st.text_area("📌 *Job Description*:")
 uploaded_file = st.file_uploader("📤 *Upload your resume (PDF)*...", type=["pdf"])
